@@ -22,6 +22,10 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
+/* 本文件保留 Cortex-M3 异常入口。项目外设中断分散在对应模块：
+ * TIM4_IRQHandler 在 User/main.c，EXTI0/1_IRQHandler 在 Hardware/Encoder.c，
+ * USART1_IRQHandler 在 Hardware/Serial.c。
+ */
 #include "stm32f10x_it.h"
 
 /** @addtogroup STM32F10x_StdPeriph_Template
@@ -132,6 +136,7 @@ void PendSV_Handler(void)
   * @param  None
   * @retval None
   */
+/* 当前 Delay.c 轮询 SysTick 状态且未开启其计数中断，因此这里不负责毫秒计时。 */
 void SysTick_Handler(void)
 {
 }

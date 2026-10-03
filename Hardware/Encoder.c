@@ -1,7 +1,9 @@
 #include "stm32f10x.h"                  // Device header
 
+/* 两路外部中断累加旋转方向，Encoder_Get 读取后清零，供 Input.c 转为菜单事件。 */
 int16_t Encoder_Count;
 
+/* PB0/PB1 上拉输入，分别接 EXTI0/EXTI1；下降沿触发后读取另一相判断方向。 */
 void Encoder_Init(void)
 {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
@@ -39,6 +41,7 @@ void Encoder_Init(void)
 	NVIC_Init(&NVIC_InitStructure);
 }
 
+/* 返回自上次读取以来的累计增量；正负号用于区分方向，随后从 0 重新累计。 */
 int16_t Encoder_Get(void)
 {
 	int16_t Temp;
@@ -47,6 +50,7 @@ int16_t Encoder_Get(void)
 	return Temp;
 }
 
+/* PB0 下降沿且 PB1 为低时记为负向；最后清除中断挂起位。 */
 void EXTI0_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(EXTI_Line0) == SET)
@@ -63,6 +67,7 @@ void EXTI0_IRQHandler(void)
 	}
 }
 
+/* PB1 下降沿且 PB0 为低时记为正向，与 EXTI0 配合识别旋转方向。 */
 void EXTI1_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(EXTI_Line1) == SET)

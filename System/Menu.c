@@ -1,3 +1,7 @@
+/* 菜单与显示模块：保存菜单位置、已确认设置、编辑草稿和测量值。
+ * main.c 通过 Menu_Get... 读取设置，通过 Menu_Set... 更新显示数据。
+ * 菜单页面只负责绘制；实际 GPIO、PWM、采集和报警判定由其他模块执行。
+ */
 #include "Menu.h"
 #include "OLED.h"
 #include "Input.h"
@@ -87,6 +91,7 @@ static MenuItem *SettingsChildren[] =
     &HighLimitItem
 };
 
+/* 数组顺序就是根菜单显示顺序；根菜单的 childCount 与这里的项目数对应。 */
 static MenuItem *RootChildren[] =
 {
     &OverviewItem,
@@ -156,6 +161,7 @@ static MenuItem HighLimitItem =
     6. 当前菜单及项目数据
 ====================================================*/
 
+/* CurrentMenu 指向所属列表，CurrentPage 指向当前功能页；两者用途不同。 */
 static MenuItem *CurrentMenu = &RootMenu;
 static MenuItem *CurrentPage = 0;
 
@@ -185,6 +191,7 @@ static int16_t EditValue = 0;
 static uint16_t VoltageMv = 0;
 static uint8_t VoltageValid = 0;
 
+/* Temperature10 单位为 0.1℃；Valid 单独表示有效性，数值 0 本身也可是真实温度。 */
 static int16_t Temperature10 = 0;
 static uint8_t TemperatureValid = 0;
 static Alarm_State_t AlarmState = ALARM_WAIT;
@@ -208,11 +215,15 @@ void Menu_Init(void)
     SettingsMenu.savedSelected = 0;
     SettingsMenu.savedTopIndex = 0;
 
+    /* 上电默认设置实际在这里生效，会覆盖文件顶部同名变量的静态初值。
+     * 当前设定：流水灯关闭、舵机 0°、温度下限 10℃、上限 30℃。
+     * 这些设置保存在 RAM，当前工程没有把菜单设定写入 Flash 的流程。
+     */
     LEDEnabled = 0;
-    ServoAngle = 90;
+    ServoAngle = 0;
 
     LowLimit = 10;
-    HighLimit = 35;
+    HighLimit = 30;
     EditValue = 0;
 
     VoltageValid = 0;
@@ -228,6 +239,9 @@ void Menu_Init(void)
     8. 统一处理输入
 ====================================================*/
 
+/* 同一个事件按当前状态解释：列表中移动/进入，页面中返回/编辑，
+ * 编辑中增减草稿/确认/取消。按 BACK 取消编辑后，再按一次才离开页面。
+ */
 void Menu_Process(Input_Event_t Event)
 {
     /* 没有输入时，不重复刷新OLED。 */
@@ -469,6 +483,7 @@ static void Menu_Back(void)
     12. 参数编辑
 ====================================================*/
 
+/* 先复制已确认值到 EditValue；调整草稿时硬件仍使用原来的确认值。 */
 static void Menu_StartAdjust(void)
 {
     if (CurrentPage == &ServoItem)
@@ -507,6 +522,7 @@ static void Menu_AdjustValue(Input_Event_t Event)
     else if (CurrentPage == &LowLimitItem)
     {
         minimum = -55;
+        /* 编辑下限时至少比上限低 2℃；编辑上限时也保持相同间隔。 */
         maximum = HighLimit - 2;
     }
     else if (CurrentPage == &HighLimitItem)
@@ -543,6 +559,7 @@ static void Menu_AdjustValue(Input_Event_t Event)
     }
 }
 
+/* 只有确认操作才提交 EditValue，主循环随后读取新设定并执行。 */
 static void Menu_SaveAdjust(void)
 {
     if (CurrentPage == &ServoItem)
@@ -819,6 +836,7 @@ void Menu_SetVoltage(uint16_t Millivolts)
     }
 }
 
+/* Value10=253 表示 25.3℃；Valid=0 时仅显示占位符，不把它当实测温度。 */
 void Menu_SetTemperature(int16_t Value10, uint8_t Valid)
 {
     Valid = Valid ? 1 : 0;
@@ -891,6 +909,7 @@ int16_t Menu_GetHighLimit(void)
     return HighLimit;
 }
 
+/* 右上角共用一格：! 表示超温/低温，? 表示采样故障，空格表示正常或等待。 */
 void Menu_ShowAlarmIndicator(void)
 {
     char mark = ' ';

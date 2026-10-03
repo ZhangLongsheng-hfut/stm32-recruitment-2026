@@ -25,6 +25,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 /* Uncomment/Comment the line below to enable/disable peripheral header file inclusion */
+/* 标准外设库头文件的集中入口；包含某个驱动头文件并不等于已启用对应硬件。 */
 #include "stm32f10x_adc.h"
 #include "stm32f10x_bkp.h"
 #include "stm32f10x_can.h"

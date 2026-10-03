@@ -3,6 +3,7 @@
 
 #include "stm32f10x.h"
 
+/* 菜单接收的统一事件类型；具体按键和编码器方向在 Input.c 中映射。 */
 typedef enum
 {
     INPUT_NONE = 0,

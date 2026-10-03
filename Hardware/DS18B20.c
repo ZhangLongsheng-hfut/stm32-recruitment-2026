@@ -1,3 +1,7 @@
+/* DS18B20 单传感器驱动：PB10 为单总线数据脚，采用外部供电的转换轮询方式。
+ * 调用流程：Init -> StartConvert -> IsConversionDone -> ReadTemperature。
+ * 驱动只给出测量值和成功/失败，报警上下限由 Menu.c 与 main.c 管理。
+ */
 #include "stm32f10x.h"
 #include "DS18B20.h"
 #include "Delay.h"
@@ -11,6 +15,9 @@
 #define DQ_RELEASE()       (DS18B20_PORT->BSRR = DS18B20_PIN)
 #define DQ_READ()          ((DS18B20_PORT->IDR & DS18B20_PIN) != 0U)
 
+/* Converting 表示本次转换已启动；ConfigurationTried 避免每轮重复配置。
+ * ConversionResolution 保存配置寄存器的位 6:5，右移 5 位后作为查表下标。
+ */
 static uint8_t Converting = 0;
 static uint8_t ConfigurationTried = 0;
 static uint8_t ConversionResolution = 0x60U;
@@ -32,6 +39,7 @@ static uint8_t DS18B20_Reset(void)
         return 0;
     }
 
+    /* 保存进入前的中断屏蔽状态，时序关键段结束后恢复，避免错误地开启原本关闭的中断。 */
     primask = __get_PRIMASK();
     __disable_irq();
 
@@ -220,6 +228,9 @@ uint8_t DS18B20_StartConvert(void)
         ConfigurationTried = 0;
     }
 
+    /* data[0:1] 为温度，data[2:3] 为芯片自身报警寄存器，data[4] 为配置。
+     * 写分辨率时保留芯片原有 TH/TL；它们不等于本项目菜单中的软件报警阈值。
+     */
     th = data[2];
     tl = data[3];
 
@@ -241,6 +252,7 @@ uint8_t DS18B20_StartConvert(void)
             DS18B20_WriteByte(0x4E);
             DS18B20_WriteByte(th);
             DS18B20_WriteByte(tl);
+            /* 0x5F 请求 11 位分辨率；随后读回检查，最终按模块实际配置计时。 */
             DS18B20_WriteByte(0x5F);
 
             if (DS18B20_ReadScratchpad(data) == 0U)
@@ -266,6 +278,7 @@ uint8_t DS18B20_StartConvert(void)
     }
 
     DS18B20_WriteByte(0xCC);
+    /* Convert T 命令只启动测温，等待与读数安排在后续主循环中。 */
     DS18B20_WriteByte(0x44);
 
     Converting = 1;
@@ -322,10 +335,14 @@ uint8_t DS18B20_ReadTemperature(int16_t *Temperature10)
         return 0;
     }
 
+    /* 先拼接高低字节并屏蔽当前分辨率下无效的低位，再解释为有符号温度。
+     * 例如 raw=400 表示 25℃；负温度由 int16_t 保留符号。
+     */
     raw_bits = (uint16_t)(((uint16_t)data[1] << 8) | data[0]);
     raw_bits &= TemperatureMasks[ConversionResolution >> 5];
     raw = (int16_t)raw_bits;
 
+    /* -55*16=-880，125*16=2000；只接受传感器量程内的结果。 */
     if (raw < -880 || raw > 2000)
     {
         return 0;
@@ -333,6 +350,7 @@ uint8_t DS18B20_ReadTemperature(int16_t *Temperature10)
 
     /* 原始单位为 1/16 摄氏度，转换成 0.1 摄氏度。 */
     value = (int32_t)raw * 10;
+    /* 加半个除数后再整除，实现正负温度到 0.1℃的四舍五入。 */
     if (value >= 0)
     {
         *Temperature10 = (int16_t)((value + 8) / 16);

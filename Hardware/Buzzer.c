@@ -1,6 +1,7 @@
 #include "stm32f10x.h"
 #include "Buzzer.h"
 
+/* PB11 低电平有效：本模块只控制响/停，单响或双响节奏由 main.c 的 Buzzer_Task 决定。 */
 #define BUZZER_PORT   GPIOB
 #define BUZZER_PIN    GPIO_Pin_11
 #define BUZZER_CLOCK  RCC_APB2Periph_GPIOB

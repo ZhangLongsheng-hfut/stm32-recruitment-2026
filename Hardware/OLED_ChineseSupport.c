@@ -1,3 +1,6 @@
+/* OLED 驱动的实际实现文件：PB8/PB9 模拟 I2C，依次完成总线写入、
+ * 光标定位、ASCII/汉字绘制。菜单显示内容在 System/Menu.c 中组织。
+ */
 #include "stm32f10x.h"
 #include "OLED.h"
 #include "OLED_Font.h"
@@ -100,6 +103,7 @@ void OLED_WriteData(uint8_t Data)
   * @param  X 以左上角为原点，向右方向的坐标，范围：0~127
   * @retval 无
   */
+/* 此处 Y 是 8 像素高的显存页号；上层一个 16 像素高的文字行占用两页。 */
 void OLED_SetCursor(uint8_t Y, uint8_t X)
 {
 	OLED_WriteCommand(0xB0 | Y);					//设置Y位置
@@ -154,6 +158,7 @@ void OLED_ShowChar(uint8_t Line, uint8_t Column, char Char)
   * @param  String 要显示的字符串，范围：ASCII可见字符
   * @retval 无
   */
+/* 本函数按 ASCII 字节逐字显示，调用者负责保证行内空间；中文使用 OLED_ShowChinese。 */
 void OLED_ShowString(uint8_t Line, uint8_t Column, const char *String)
 {
 	uint8_t i;

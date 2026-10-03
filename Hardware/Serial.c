@@ -1,6 +1,9 @@
 #include "Serial.h"
 #include <string.h>
 
+/* USART1：PA9 发送、PA10 接收，9600 波特率、8 数据位、无校验、1 停止位。
+ * 命令示例：ANGLE=90 后发送换行。中断收整行，main.c 解析并回复 ACK 或 ERR。
+ */
 char Serial_RxPacket[100];          // 保存接收到的字符串
 volatile uint8_t Serial_RxFlag = 0; // 中断置1，主循环处理后清零
 
@@ -61,6 +64,7 @@ void Serial_Init(void)
   * 参    数：Byte 要发送的一个字节
   * 返 回 值：无
   */
+/* TXE 表示发送数据寄存器可接收下一字节，不等同于最后一位已从引脚发出。 */
 void Serial_SendByte(uint8_t Byte)
 {
 	USART_SendData(USART1, Byte);		//将字节数据写入数据寄存器，写入后USART自动生成时序波形
@@ -103,6 +107,7 @@ void USART1_IRQHandler(void)
     RxData = (uint8_t)USART_ReceiveData(USART1);
 
     /* 上一条命令尚未处理，先保持缓冲区内容 */
+    /* 这是单缓冲接收：待主循环处理期间，新到字节已读出但会被丢弃。 */
     if (Serial_RxFlag == 1)
     {
         return;
@@ -159,6 +164,7 @@ void USART1_IRQHandler(void)
  * 函数：解析ANGLE命令，例如ANGLE=90
  * 返回：0～180表示合法目标角度；-1表示命令错误
  */
+/* 严格匹配大写 ANGLE= 和十进制数字；空格、正负号、小数或大于 180 均判错。 */
 int16_t Serial_ParseAngle(const char *Command)
 {
     uint8_t i;

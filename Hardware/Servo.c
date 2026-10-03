@@ -5,6 +5,9 @@
   * 参    数：无
   * 返 回 值：无
   */
+/* PA1 输出 TIM2_CH2。按 72MHz 定时器时钟计算：72 分频得到 1MHz，
+ * ARR=19999 得到 20ms 周期；CCR2 的计数值在此配置下就是高电平微秒数。
+ */
 void PWM_Init(void)
 {
 	/*开启时钟*/
@@ -39,6 +42,7 @@ void PWM_Init(void)
 	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1;               //输出比较模式，选择PWM模式1
 	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High;       //输出极性，选择为高，若选择极性为低，则输出高低电平取反
 	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;   //输出使能
+    /* PWM 刚启用时先用 1500us，main 随后按 Menu_Init 的角度设定覆盖该值。 */
 	TIM_OCInitStructure.TIM_Pulse = 1500;							//初始的CCR值
 	TIM_OC2Init(TIM2, &TIM_OCInitStructure);                        //将结构体变量交给TIM_OC2Init，配置TIM2的输出比较通道2
 	
@@ -53,6 +57,9 @@ void PWM_Init(void)
   * 注意事项：CCR和ARR共同决定占空比，此函数仅设置CCR的值，并不直接是占空比
   *           占空比Duty = CCR / (ARR + 1)
   */
+/* 本项目实际传入 500~2500，对应 500~2500us；上方模板注释的 0~100
+ * 不是当前舵机调用范围。此函数直接写 CCR2，角度范围由 Servo_SetAngle 检查。
+ */
 void PWM_SetCompare2(uint16_t Compare)
 {
 	TIM_SetCompare2(TIM2, Compare);		//设置CCR2的值

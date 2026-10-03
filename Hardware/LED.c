@@ -2,6 +2,7 @@
 #include "LED.h"
 
 /* 四个LED使用的引脚 */
+/* 流水速度由 main.c 的时间判断决定，本模块每次调用只负责推进一步。 */
 #define LED_PINS (GPIO_Pin_12 | GPIO_Pin_13 | \
                   GPIO_Pin_14 | GPIO_Pin_15)
 

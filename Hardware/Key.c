@@ -1,6 +1,9 @@
 #include "stm32f10x.h"
 #include "Key.h"
 
+/* PA5 为 ENTER，PA3 为 BACK，均为上拉输入、按下接地。
+ * LastRaw 是最近原始电平，Stable 是消抖后的状态，Pending 保存尚未取走的按下事件。
+ */
 static uint8_t LastRaw = 0;
 static uint8_t Stable = 0;
 static uint8_t Pending = 0;
@@ -57,12 +60,14 @@ void Key_Scan(uint32_t Now)
         raw != Stable)
     {
         /* 稳定按下时只产生一次事件，长按不重复。 */
+        /* raw & ~Stable 只保留本次新按下的位；松开按键不会生成事件。 */
         Pending |= (uint8_t)(raw & (uint8_t)~Stable);
         Stable = raw;
     }
 }
 
 /* 保持原接口，Input.c可以继续调用它。 */
+/* 每次取走一个事件并清除对应位；同时有两个事件时，先返回 ENTER。 */
 uint8_t Key_GetNum(void)
 {
     if ((Pending & 1U) != 0U)

@@ -2,6 +2,7 @@
 #define __OLED_FONT_H
 
 /*OLED字模库，宽8像素，高16像素*/
+/* 从空格字符开始按 ASCII 顺序排列；OLED_ShowChar 用 Char - ' ' 查找对应字模。 */
 const uint8_t OLED_F8x16[][16]=
 {
 	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
