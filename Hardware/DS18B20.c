@@ -12,6 +12,12 @@
 #define DQ_READ()          ((DS18B20_PORT->IDR & DS18B20_PIN) != 0U)
 
 static uint8_t Converting = 0;
+static uint8_t ConfigurationTried = 0;
+static uint8_t ConversionResolution = 0x60U;
+
+/* 9/10/11/12 位转换时间上限加少量余量，单位 ms。 */
+static const uint16_t ConversionTimeouts[4] = {100U, 190U, 380U, 760U};
+static const uint16_t TemperatureMasks[4] = {0xFFF8U, 0xFFFCU, 0xFFFEU, 0xFFFFU};
 
 /* 复位并检测应答，返回 1 表示传感器存在。 */
 static uint8_t DS18B20_Reset(void)
@@ -166,7 +172,12 @@ static uint8_t DS18B20_ReadScratchpad(uint8_t data[9])
         return 0;
     }
 
-    return (DS18B20_CRC8(data, 8) == data[8]) ? 1U : 0U;
+    if (DS18B20_CRC8(data, 8) != data[8])
+    {
+        return 0;
+    }
+
+    return 1;
 }
 
 uint8_t DS18B20_Init(void)
@@ -182,42 +193,97 @@ uint8_t DS18B20_Init(void)
     GPIO_Init(DS18B20_PORT, &gpio);
 
     Converting = 0;
+    ConfigurationTried = 0;
+    ConversionResolution = 0x60U;
+
     return DS18B20_Reset();
 }
 
 uint8_t DS18B20_StartConvert(void)
 {
     uint8_t data[9];
+    uint8_t th;
+    uint8_t tl;
+    uint8_t attempt;
 
     Converting = 0;
 
-    /* 每次启动都配置分辨率，兼顾拔下后重新接入的情况。 */
     if (DS18B20_ReadScratchpad(data) == 0U)
     {
+        ConfigurationTried = 0;
         return 0;
     }
 
+    /* 配置变化或传感器重新接入后，重新尝试首选分辨率。 */
+    if ((data[4] & 0x60U) != ConversionResolution)
+    {
+        ConfigurationTried = 0;
+    }
+
+    th = data[2];
+    tl = data[3];
+
+    /* 首次最多尝试三次；固定 12 位模块避免每轮反复写配置。 */
+    if (ConfigurationTried == 0U)
+    {
+        ConfigurationTried = 1;
+        for (attempt = 0;
+             (data[4] & 0x60U) != 0x40U && attempt < 3U;
+             attempt++)
+        {
+            if (DS18B20_Reset() == 0U)
+            {
+                ConfigurationTried = 0;
+                return 0;
+            }
+
+            DS18B20_WriteByte(0xCC);
+            DS18B20_WriteByte(0x4E);
+            DS18B20_WriteByte(th);
+            DS18B20_WriteByte(tl);
+            DS18B20_WriteByte(0x5F);
+
+            if (DS18B20_ReadScratchpad(data) == 0U)
+            {
+                ConfigurationTried = 0;
+                return 0;
+            }
+        }
+    }
+
+    /* 合法配置为 1F/3F/5F/7F，按真实分辨率执行转换。 */
+    if ((data[4] & 0x9FU) != 0x1FU)
+    {
+        ConfigurationTried = 0;
+        return 0;
+    }
+    ConversionResolution = data[4] & 0x60U;
+
     if (DS18B20_Reset() == 0U)
     {
+        ConfigurationTried = 0;
         return 0;
     }
 
     DS18B20_WriteByte(0xCC);
-    DS18B20_WriteByte(0x4E);     /* Write Scratchpad。 */
-    DS18B20_WriteByte(data[2]);  /* 保留传感器原有的 TH。 */
-    DS18B20_WriteByte(data[3]);  /* 保留传感器原有的 TL。 */
-    DS18B20_WriteByte(0x5F);     /* 11 位分辨率，不写 EEPROM。 */
-
-    if (DS18B20_Reset() == 0U)
-    {
-        return 0;
-    }
-
-    DS18B20_WriteByte(0xCC);
-    DS18B20_WriteByte(0x44);     /* Convert T：启动转换。 */
+    DS18B20_WriteByte(0x44);
 
     Converting = 1;
     return 1;
+}
+
+uint16_t DS18B20_GetConversionTimeoutMs(void)
+{
+    return ConversionTimeouts[ConversionResolution >> 5];
+}
+
+uint8_t DS18B20_IsConversionDone(void)
+{
+    if (Converting == 0U)
+    {
+        return 0;
+    }
+    return DS18B20_ReadBit();
 }
 
 uint8_t DS18B20_ReadTemperature(int16_t *Temperature10)
@@ -238,22 +304,26 @@ uint8_t DS18B20_ReadTemperature(int16_t *Temperature10)
     /* 外部供电时，读到 1 表示转换完成。 */
     if (DS18B20_ReadBit() == 0U)
     {
+        ConfigurationTried = 0;
         return 0;
     }
 
     if (DS18B20_ReadScratchpad(data) == 0U)
     {
+        ConfigurationTried = 0;
         return 0;
     }
 
-    /* 确认此次数据确实使用 11 位分辨率。 */
-    if ((data[4] & 0x60U) != 0x40U)
+    /* 检查配置合法，且分辨率与本次启动时一致。 */
+    if ((data[4] & 0x9FU) != 0x1FU ||
+        (data[4] & 0x60U) != ConversionResolution)
     {
+        ConfigurationTried = 0;
         return 0;
     }
 
     raw_bits = (uint16_t)(((uint16_t)data[1] << 8) | data[0]);
-    raw_bits &= 0xFFFEU;  /* 11 位模式下 bit0 未定义。 */
+    raw_bits &= TemperatureMasks[ConversionResolution >> 5];
     raw = (int16_t)raw_bits;
 
     if (raw < -880 || raw > 2000)

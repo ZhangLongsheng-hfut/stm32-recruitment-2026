@@ -102,10 +102,7 @@ static MenuItem *RootChildren[] =
     5. 菜单数据
 ====================================================*/
 
-/* 名称先使用英文，现有ASCII字库即可显示。
-   后续补齐中文字模后，可以直接替换name中的文字。
-
-   初始化顺序：
+/* 初始化顺序：
    name、action、parent、children、childCount、
    savedSelected、savedTopIndex。 */
 
@@ -164,8 +161,7 @@ static MenuItem *CurrentPage = 0;
 
 static Menu_State_t Menu_State = MENU_STATE_MENU;
 
-/* 与参考项目相同：
-   selected表示整张列表中选中了哪项；
+/* selected表示整张列表中选中了哪项；
    topIndex表示屏幕第一行对应哪项。 */
 static uint8_t selected = 0;
 static uint8_t topIndex = 0;
@@ -191,6 +187,7 @@ static uint8_t VoltageValid = 0;
 
 static int16_t Temperature10 = 0;
 static uint8_t TemperatureValid = 0;
+static Alarm_State_t AlarmState = ALARM_WAIT;
 
 
 /*====================================================
@@ -220,6 +217,7 @@ void Menu_Init(void)
 
     VoltageValid = 0;
     TemperatureValid = 0;
+	AlarmState = ALARM_WAIT;
 
     Menu_Show();
     Menu_ShowCursor();
@@ -509,11 +507,11 @@ static void Menu_AdjustValue(Input_Event_t Event)
     else if (CurrentPage == &LowLimitItem)
     {
         minimum = -55;
-        maximum = HighLimit - 1;
+        maximum = HighLimit - 2;
     }
     else if (CurrentPage == &HighLimitItem)
     {
-        minimum = LowLimit + 1;
+        minimum = LowLimit + 2;
         maximum = 125;
     }
     else
@@ -699,28 +697,34 @@ static void Temperature_Page(void)
     OLED_ShowChinese(1, 1, "温度");
     ShowTemperature(2, 6);
 
-    /* 三位数字加符号，可容纳-55～125℃。 */
     OLED_ShowString(3, 1, "L:");
     OLED_ShowSignedNum(3, 3, LowLimit, 3);
 
     OLED_ShowString(3, 8, "H:");
     OLED_ShowSignedNum(3, 10, HighLimit, 3);
 
-    /* 本处只显示越限状态，不控制蜂鸣器。
-       实际报警判断需在主循环持续执行，
-       不能依赖用户是否打开温度页。 */
-    if (!TemperatureValid)
+    /* 显示后台实际报警状态，与蜂鸣器保持一致。 */
+    switch (AlarmState)
     {
-        OLED_ShowString(4, 1, "WAIT   B:Back   ");
-    }
-    else if (Temperature10 < LowLimit * 10 ||
-             Temperature10 > HighLimit * 10)
-    {
-        OLED_ShowString(4, 1, "ALARM! B:Back   ");
-    }
-    else
-    {
+    case ALARM_LOW:
+        OLED_ShowString(4, 1, "LOW!   B:Back   ");
+        break;
+
+    case ALARM_HIGH:
+        OLED_ShowString(4, 1, "HIGH!  B:Back   ");
+        break;
+
+    case ALARM_FAULT:
+        OLED_ShowString(4, 1, "FAULT! B:Back   ");
+        break;
+
+    case ALARM_NORMAL:
         OLED_ShowString(4, 1, "Normal B:Back   ");
+        break;
+
+    default:
+        OLED_ShowString(4, 1, "WAIT   B:Back   ");
+        break;
     }
 }
 
@@ -885,4 +889,39 @@ int16_t Menu_GetLowLimit(void)
 int16_t Menu_GetHighLimit(void)
 {
     return HighLimit;
+}
+
+void Menu_ShowAlarmIndicator(void)
+{
+    char mark = ' ';
+
+    if (AlarmState == ALARM_LOW || AlarmState == ALARM_HIGH)
+    {
+        mark = '!';
+    }
+    else if (AlarmState == ALARM_FAULT)
+    {
+        mark = '?';
+    }
+
+    /* 所有页面共用右上角标记。 */
+    OLED_ShowChar(1, 16, mark);
+}
+
+void Menu_SetAlarmState(Alarm_State_t State)
+{
+    if (AlarmState == State)
+    {
+        return;
+    }
+
+    AlarmState = State;
+
+    /* 状态变化时，立即更新温度页正文。 */
+    if (CurrentPage == &TemperatureItem)
+    {
+        Menu_RefreshPage();
+    }
+
+    Menu_ShowAlarmIndicator();
 }
