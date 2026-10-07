@@ -204,14 +204,12 @@ static void Alarm_Task(void)
     {
         next = ALARM_LOW;
     }
-    else if (previous == ALARM_HIGH &&
-             LatestTemperature10 > high10 - 10)
+    else if (previous == ALARM_HIGH && LatestTemperature10 > high10 - 1)
     {
-        /* 高温报警：降到上限减1℃才解除。 */
+        /* 高温报警：降到上限减0.1℃才解除。 */
         next = ALARM_HIGH;
     }
-    else if (previous == ALARM_LOW &&
-             LatestTemperature10 < low10 + 10)
+    else if (previous == ALARM_LOW && LatestTemperature10 < low10 + 1)
     {
         /* 低温报警：升到下限加1℃才解除。 */
         next = ALARM_LOW;
