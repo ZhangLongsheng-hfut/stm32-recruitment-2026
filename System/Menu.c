@@ -21,8 +21,7 @@ typedef enum
     MENU_STATE_ADJUST       /* 修改待确认参数 */
 } Menu_State_t;
 
-/* 前五个成员沿用参考项目。
-   最后两个成员用于保存每一级菜单的位置。 */
+
 typedef struct MenuItem
 {
     const char *name;               /* 菜单名称 */
@@ -69,7 +68,7 @@ static void ShowTemperature(uint8_t Line, uint8_t Column);
 
 static MenuItem RootMenu;
 static MenuItem SettingsMenu;
-
+	
 static MenuItem OverviewItem;
 static MenuItem LEDItem;
 static MenuItem VoltageItem;
@@ -173,14 +172,14 @@ static uint8_t selected = 0;
 static uint8_t topIndex = 0;
 
 /* 灯和舵机的控制设定。
-   本文件只保存设定，不直接控制GPIO或PWM。
+   本文件不直接控制GPIO或PWM。
    后台硬件程序通过Menu_Get...函数读取。 */
 static uint8_t LEDEnabled = 0;
-static uint16_t ServoAngle = 90;
+static uint16_t ServoAngle = 0;
 
 /* 温度阈值，单位为整数℃。 */
 static int16_t LowLimit = 10;
-static int16_t HighLimit = 35;
+static int16_t HighLimit = 30;
 
 /* EditValue是待确认值。
    旋转只修改它；ENTER确认后才修改实际设定。 */
@@ -210,18 +209,23 @@ void Menu_Init(void)
     selected = 0;
     topIndex = 0;
 
+	/* 菜单位置初始化
+	   RootMenu.savedSelected  根菜单的选择状态
+       RootMenu.savedTopIndex  LED根菜单最上方的显示状态
+       SettingsMenu.savedSelected  设置菜单的选择状态
+       SettingsMenu.savedTopIndex  LED设置菜单最上方的显示状态（只有两项，无滚动，一般为0）*/
     RootMenu.savedSelected = 0;
     RootMenu.savedTopIndex = 0;
     SettingsMenu.savedSelected = 0;
     SettingsMenu.savedTopIndex = 0;
 
-    /* 上电默认设置实际在这里生效，会覆盖文件顶部同名变量的静态初值。
-     * 当前设定：流水灯关闭、舵机 0°、温度下限 10℃、上限 30℃。
-     * 这些设置保存在 RAM，当前工程没有把菜单设定写入 Flash 的流程。
-     */
-    LEDEnabled = 0;
-    ServoAngle = 0;
-
+    
+    LEDEnabled = 0;  //LED状态
+    ServoAngle = 0;  //舵机角度
+	
+	/* 温度上下限初始值设置
+	   温度下限为 10℃。
+	   温度上限为 30℃。*/
     LowLimit = 10;
     HighLimit = 30;
     EditValue = 0;
@@ -256,7 +260,7 @@ void Menu_Process(Input_Event_t Event)
         if (Event == INPUT_DOWN)
         {
             /* 已在最后一项时，不继续向下。 */
-            if (selected + 1 < CurrentMenu->childCount)
+            if (selected + 1 < CurrentMenu->childCount) //检查下一项的下标是否还在菜单范围内
             {
                 selected++;
 
@@ -372,11 +376,7 @@ static void Menu_Show(void)
         }
 
         /* 第1个汉字列留给光标和间隔。
-           名称从汉字第2列，即像素X=16开始。
-
-           现有ShowChinese也支持ASCII混合显示，
-           因此当前英文名称可以直接使用；
-           将来换成中文名称，不必再改显示函数。 */
+           名称从汉字第2列，即像素X=16开始。*/
         OLED_ShowChinese(
             i + 1,
             2,

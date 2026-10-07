@@ -14,7 +14,7 @@ Input_Event_t Input_GetEvent(void)
     int16_t Encoder_Num;
     uint8_t KeyNum;
 
-    Encoder_Num = Encoder_Get();
+    Encoder_Num = Encoder_Get();	
     KeyNum = Key_GetNum();
 
     /* ENTER°´¼ü */

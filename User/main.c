@@ -61,6 +61,7 @@ static void Tick_Init(void)
     TIM_SetCounter(TIM4, 0);
     TIM_ClearITPendingBit(TIM4, TIM_IT_Update);
 
+	/* NVIC配置 */
     nvic.NVIC_IRQChannel = TIM4_IRQn;
     nvic.NVIC_IRQChannelPreemptionPriority = 0;
     nvic.NVIC_IRQChannelSubPriority = 0;
@@ -286,7 +287,7 @@ static void Boot_Show(void)
     /* 4个汉字共64像素，从X=32（第3个汉字列）开始居中。 */
     for (i = 0; i < 4; i++)
     {
-        OLED_ShowChinese(2, 3 + i, welcome[i]);
+        OLED_ShowChinese(3, 3 + i, welcome[i]);
         if (i < 3) Delay_ms(100);
     }
     Delay_ms(2000);
@@ -295,53 +296,51 @@ static void Boot_Show(void)
 
 int main(void)
 {
-    Input_Event_t event;
-    int16_t serialAngle;
-    uint16_t targetAngle;
-
-    uint32_t now;
-    uint32_t lastADC;
-    uint32_t lastLED;
-    uint8_t ledRunning = 0;
-
-    /* 先关闭声光输出，再初始化计时、输入和显示；开机动画期间尚未开始测温。 */
+    Input_Event_t event;   // 用户操作事件
+    int16_t serialAngle;   // 串口命令解析出的角度
+    uint16_t targetAngle;  // 菜单设置的舵机目标角度
+    uint32_t now;          // 当前毫秒计数
+    uint32_t lastADC;      // 上次采集电压时间
+    uint32_t lastLED;      // 上次推进流水灯的时间
+    uint8_t ledRunning = 0;// 流水灯状态记录
+	
+	
     Buzzer_Init();
     LED_Init();
-
     NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
     Tick_Init();
-
     Key_Init();
     Encoder_Init();
     OLED_Init();
-    Boot_Show();
-
+	
+    Boot_Show(); // 显示开机动画
+	
     AD_Init();
     PWM_Init();
     Serial_Init();
-
-    /* Menu_Init 中的赋值决定本次上电的最终默认设置，随后用于硬件输出。 */
+	
+    /* Menu_Init 中的赋值决定本次上电的最终默认设置 */
     Menu_Init();
+	
     DS18B20_Init();
 
-    MonitorStartedAt = Tick_GetMs();
-    BeepStartedAt = MonitorStartedAt;
+    MonitorStartedAt = Tick_GetMs();   // 获取当前计时
+    BeepStartedAt = MonitorStartedAt;  // 将当前计时赋值给蜂鸣器计时作为蜂鸣器计时0时刻
 
     /* 进入循环后立即采集一次电压。 */
-    lastADC = MonitorStartedAt - 100U;
+    lastADC = MonitorStartedAt - 100U;  // 100ms采集一次，减去100可以直接在该时刻（now）采样一次
     lastLED = MonitorStartedAt;
 
-    Servo_SetAngle(Menu_GetServoAngle());
+    Servo_SetAngle(Menu_GetServoAngle());  // 将舵机当前角度设置为在"Menu_Init()"读取的值
 
     /* 每轮依次处理输入、串口、测温/报警、电压、流水灯、舵机和报警标记。
      * 即使停留在某个菜单页，后台任务也一直运行。
      */
     while (1)
     {
-        /* 非阻塞按键扫描及菜单处理。 */
-        Key_Scan(Tick_GetMs());
-        event = Input_GetEvent();
-        Menu_Process(event);
+        Key_Scan(Tick_GetMs());   //扫描按键
+        event = Input_GetEvent(); //记录事件
+        Menu_Process(event);      //处理事件
 
         /* 保留现有串口舵机控制。 */
         if (Serial_RxFlag == 1)

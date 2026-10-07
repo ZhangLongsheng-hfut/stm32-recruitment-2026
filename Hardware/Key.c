@@ -1,13 +1,11 @@
 #include "stm32f10x.h"
 #include "Key.h"
 
-/* PA5 为 ENTER，PA3 为 BACK，均为上拉输入、按下接地。
- * LastRaw 是最近原始电平，Stable 是消抖后的状态，Pending 保存尚未取走的按下事件。
- */
-static uint8_t LastRaw = 0;
-static uint8_t Stable = 0;
-static uint8_t Pending = 0;
-static uint32_t ChangedAt = 0;
+/* PA5 为 ENTER，PA3 为 BACK，均为上拉输入、按下接地。*/
+static uint8_t LastRaw = 0;  //保存最近观察到的按键状态，包括尚未确认的变化
+static uint8_t Stable = 0;   //保存已经持续稳定至少 20 ms、确认可信的按键状态
+static uint8_t Pending = 0;  //保存已确认的按下事件，等其他函数取走
+static uint32_t ChangedAt = 0;  //保存原始状态最后一次变化时的毫秒计数
 
 /* bit0：ENTER，bit1：BACK。 */
 static uint8_t Key_ReadRaw(void)
@@ -29,14 +27,13 @@ static uint8_t Key_ReadRaw(void)
 
 void Key_Init(void)
 {
-    GPIO_InitTypeDef gpio;
-
+	/* 按键的GPIO口初始化 */
+    GPIO_InitTypeDef GPIO_InitStructure;
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);
-
-    gpio.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_5;
-    gpio.GPIO_Mode = GPIO_Mode_IPU;
-    gpio.GPIO_Speed = GPIO_Speed_2MHz;
-    GPIO_Init(GPIOA, &gpio);
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_5;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_2MHz;
+    GPIO_Init(GPIOA, &GPIO_InitStructure);
 
     LastRaw = Key_ReadRaw();
     Stable = LastRaw;
@@ -56,8 +53,7 @@ void Key_Scan(uint32_t Now)
     }
 
     /* 连续稳定20ms，才确认状态变化。 */
-    if ((uint32_t)(Now - ChangedAt) >= 20U &&
-        raw != Stable)
+    if ((uint32_t)(Now - ChangedAt) >= 20U && raw != Stable)
     {
         /* 稳定按下时只产生一次事件，长按不重复。 */
         /* raw & ~Stable 只保留本次新按下的位；松开按键不会生成事件。 */
