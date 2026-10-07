@@ -211,7 +211,7 @@ static void Alarm_Task(void)
     }
     else if (previous == ALARM_LOW && LatestTemperature10 < low10 + 1)
     {
-        /* 低温报警：升到下限加1℃才解除。 */
+        /* 低温报警：升到下限加0.1℃才解除。 */
         next = ALARM_LOW;
     }
     else
