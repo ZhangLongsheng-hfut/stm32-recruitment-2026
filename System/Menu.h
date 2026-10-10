@@ -17,7 +17,7 @@ typedef enum
 void Menu_Init(void);
 void Menu_Process(Input_Event_t Event);
 
-void Menu_SetVoltage(uint16_t Millivolts);
+void Menu_SetVoltage(uint16_t VoltageNowMv);
 /* 温度参数单位为 0.1℃，Valid=0 显示占位符；不在此接口中进行报警判定。 */
 void Menu_SetTemperature(int16_t Temperature10, uint8_t Valid);
 

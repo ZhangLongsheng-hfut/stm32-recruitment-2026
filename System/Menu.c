@@ -1,7 +1,3 @@
-/* 菜单与显示模块：保存菜单位置、已确认设置、编辑草稿和测量值。
- * main.c 通过 Menu_Get... 读取设置，通过 Menu_Set... 更新显示数据。
- * 菜单页面只负责绘制；实际 GPIO、PWM、采集和报警判定由其他模块执行。
- */
 #include "Menu.h"
 #include "OLED.h"
 #include "Input.h"
@@ -187,7 +183,7 @@ static int16_t EditValue = 0;
 
 /* 来自外设驱动的测量数据。
    未取得数据时，页面显示横线。 */
-static uint16_t VoltageMv = 0;
+static uint16_t VoltageLastMv = 0;
 static uint8_t VoltageValid = 0;
 
 /* Temperature10 单位为 0.1℃；Valid 单独表示有效性，数值 0 本身也可是真实温度。 */
@@ -560,6 +556,7 @@ static void Menu_AdjustValue(Input_Event_t Event)
 }
 
 /* 只有确认操作才提交 EditValue，主循环随后读取新设定并执行。 */
+/* 将草稿写为正式的参数 */
 static void Menu_SaveAdjust(void)
 {
     if (CurrentPage == &ServoItem)
@@ -585,9 +582,7 @@ static void Menu_RefreshPage(void)
 {
     /* 页面函数里不清全屏、不等待按键，
        每次画完当前内容就返回。 */
-    if (Menu_State != MENU_STATE_MENU &&
-        CurrentPage != 0 &&
-        CurrentPage->action != 0)
+    if ( (Menu_State != MENU_STATE_MENU) && (CurrentPage != 0) && (CurrentPage->action != 0) )
     {
         CurrentPage->action();
     }
@@ -610,7 +605,7 @@ static void ShowVoltage(uint8_t Line, uint8_t Column)
 
     /* 毫伏换算成0.01V，先加5再除10用于四舍五入。
        例如1650mV -> 165 -> 1.65V。 */
-    Voltage100 = (VoltageMv + 5) / 10;
+    Voltage100 = (VoltageLastMv + 5) / 10;
 
     OLED_ShowNum(Line, Column, Voltage100 / 100, 1);
     OLED_ShowChar(Line, Column + 1, '.');
@@ -645,8 +640,7 @@ static void ShowTemperature(uint8_t Line, uint8_t Column)
         magnitude = (uint16_t)Temperature10;
     }
 
-    /* 不强制补前导零：
-       25.3、-5.2、125.0都显示正确的位数。 */
+    
     if (magnitude >= 1000)
     {
         OLED_ShowNum(Line, digitColumn, magnitude / 10, 3);
@@ -757,6 +751,7 @@ static void Servo_Page(void)
     OLED_ShowString(3, 1, "                ");
     OLED_ShowString(4, 1, "                ");
 
+	/* 进入编辑模式 */
     if (Menu_State == MENU_STATE_ADJUST)
     {
         OLED_ShowString(3, 1, "Draft:");
@@ -782,6 +777,7 @@ static void Limit_Page(const char *Title, int16_t Value)
     OLED_ShowString(3, 1, "                ");
     OLED_ShowString(4, 1, "                ");
 
+	/* 进入编辑模式 */
     if (Menu_State == MENU_STATE_ADJUST)
     {
         OLED_ShowString(3, 1, "Draft:");
@@ -811,26 +807,32 @@ static void HighLimit_Page(void)
     16. 后续硬件接入接口
 ====================================================*/
 
-void Menu_SetVoltage(uint16_t Millivolts)
+
+
+void Menu_SetVoltage(uint16_t VoltageNowMv)
 {
-    /* 本项目PA0测量范围为0～3.3V。 */
-    if (Millivolts > 3300)
+	
+	/* VoltageNowMv   本次传入的电压
+       VoltageLastMv  上次保存的电压
+       VoltageValid   是否已经收到有效电压数据*/
+	
+    /* 本项目PA0测量范围为0～3.3V，超出不予显示。 */
+    if (VoltageNowMv > 3300)
     {
-        Millivolts = 3300;
+        VoltageNowMv = 3300;
     }
 
     /* 数据没有改变，不重复写OLED。 */
-    if (VoltageValid && VoltageMv == Millivolts)
+    if (VoltageValid && VoltageLastMv == VoltageNowMv)
     {
         return;
     }
 
-    VoltageMv = Millivolts;
+    VoltageLastMv = VoltageNowMv;
     VoltageValid = 1;
 
     /* 只更新使用电压数据的页面。 */
-    if (CurrentPage == &VoltageItem ||
-        CurrentPage == &OverviewItem)
+    if (CurrentPage == &VoltageItem || CurrentPage == &OverviewItem)
     {
         Menu_RefreshPage();
     }

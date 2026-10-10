@@ -1,7 +1,3 @@
-/* DS18B20 单传感器驱动：PB10 为单总线数据脚，采用外部供电的转换轮询方式。
- * 调用流程：Init -> StartConvert -> IsConversionDone -> ReadTemperature。
- * 驱动只给出测量值和成功/失败，报警上下限由 Menu.c 与 main.c 管理。
- */
 #include "stm32f10x.h"
 #include "DS18B20.h"
 #include "Delay.h"
@@ -25,6 +21,8 @@ static uint8_t ConversionResolution = 0x60U;
 /* 9/10/11/12 位转换时间上限加少量余量，单位 ms。 */
 static const uint16_t ConversionTimeouts[4] = {100U, 190U, 380U, 760U};
 static const uint16_t TemperatureMasks[4] = {0xFFF8U, 0xFFFCU, 0xFFFEU, 0xFFFFU};
+
+
 
 /* 复位并检测应答，返回 1 表示传感器存在。 */
 static uint8_t DS18B20_Reset(void)
@@ -188,23 +186,24 @@ static uint8_t DS18B20_ReadScratchpad(uint8_t data[9])
     return 1;
 }
 
+/* DS18B20初始化 */
 uint8_t DS18B20_Init(void)
 {
-    GPIO_InitTypeDef gpio;
+    GPIO_InitTypeDef GPIO_InitStructure;
 
     RCC_APB2PeriphClockCmd(DS18B20_CLOCK, ENABLE);
 
     DQ_RELEASE();
-    gpio.GPIO_Pin = DS18B20_PIN;
-    gpio.GPIO_Mode = GPIO_Mode_Out_OD;
-    gpio.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(DS18B20_PORT, &gpio);
+    GPIO_InitStructure.GPIO_Pin = DS18B20_PIN;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_OD;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_Init(DS18B20_PORT, &GPIO_InitStructure);
 
     Converting = 0;
     ConfigurationTried = 0;
     ConversionResolution = 0x60U;
 
-    return DS18B20_Reset();
+    return DS18B20_Reset();   //调用检查传感器是否正常
 }
 
 uint8_t DS18B20_StartConvert(void)
