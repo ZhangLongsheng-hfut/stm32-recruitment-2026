@@ -209,7 +209,7 @@ void Menu_Init(void)
 	   RootMenu.savedSelected  根菜单的选择状态
        RootMenu.savedTopIndex  LED根菜单最上方的显示状态
        SettingsMenu.savedSelected  设置菜单的选择状态
-       SettingsMenu.savedTopIndex  LED设置菜单最上方的显示状态（只有两项，无滚动，一般为0）*/
+       SettingsMenu.savedTopIndex  LED设置菜单最上方的显示状态*/
     RootMenu.savedSelected = 0;
     RootMenu.savedTopIndex = 0;
     SettingsMenu.savedSelected = 0;
@@ -849,8 +849,7 @@ void Menu_SetTemperature(int16_t Value10, uint8_t Valid)
         Valid = 0;
     }
 
-    if (Temperature10 == Value10 &&
-        TemperatureValid == Valid)
+    if (Temperature10 == Value10 && TemperatureValid == Valid)
     {
         return;
     }
@@ -858,8 +857,7 @@ void Menu_SetTemperature(int16_t Value10, uint8_t Valid)
     Temperature10 = Value10;
     TemperatureValid = Valid;
 
-    if (CurrentPage == &TemperatureItem ||
-        CurrentPage == &OverviewItem)
+    if (CurrentPage == &TemperatureItem || CurrentPage == &OverviewItem)
     {
         Menu_RefreshPage();
     }
@@ -886,14 +884,12 @@ uint8_t Menu_SetServoAngle(uint16_t Angle)
 
     /* 串口修改角度时，取消舵机页的旧编辑值。
        温度阈值编辑不受影响。 */
-    if (CurrentPage == &ServoItem &&
-        Menu_State == MENU_STATE_ADJUST)
+    if (CurrentPage == &ServoItem && Menu_State == MENU_STATE_ADJUST)
     {
         Menu_State = MENU_STATE_PAGE;
     }
 
-    if (CurrentPage == &ServoItem ||
-        CurrentPage == &OverviewItem)
+    if (CurrentPage == &ServoItem || CurrentPage == &OverviewItem)
     {
         Menu_RefreshPage();
     }

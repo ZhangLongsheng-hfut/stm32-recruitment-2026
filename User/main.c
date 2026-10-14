@@ -1,7 +1,3 @@
-/* 项目入口与后台调度：输入交给 Menu，采集结果交给显示和报警任务。
- * 阅读顺序：main -> Temperature_Task -> Alarm_Task -> Buzzer_Task。
- * 定时由 TIM4 提供毫秒计数；SysTick 只供 Delay 使用。
- */
 #include "stm32f10x.h"
 #include "OLED.h"
 #include "Encoder.h"
@@ -106,8 +102,7 @@ static void Temperature_Task(void)
     if (waiting != 0U)
     {
         /* 未完成且未超时则继续后台等待，不结束本次转换。 */
-        if (DS18B20_IsConversionDone() == 0U &&
-            (uint32_t)(now - convertAt) < DS18B20_GetConversionTimeoutMs())
+        if (DS18B20_IsConversionDone() == 0U && (uint32_t)(now - convertAt) < DS18B20_GetConversionTimeoutMs())
         {
             return;
         }
@@ -133,8 +128,7 @@ static void Temperature_Task(void)
     /* 用无符号时间差判断周期，可跨越毫秒计数的回绕点。
      * 500ms 是两次发起采样的最小间隔；实际转换较慢时周期会相应延长。
      */
-    if (cycleStarted != 0U &&
-        (uint32_t)(now - cycleAt) < 500U)
+    if (cycleStarted != 0U && (uint32_t)(now - cycleAt) < 500U)
     {
         return;
     }
@@ -169,9 +163,7 @@ static void Alarm_Task(void)
     Alarm_State_t previous;
     Alarm_State_t next;
 
-    limitsChanged = (!limitsKnown ||
-                     low != previousLow ||
-                     high != previousHigh);
+    limitsChanged = (!limitsKnown || low != previousLow || high != previousHigh);
 
     limitsKnown = 1;
     previousLow = low;
@@ -184,13 +176,12 @@ static void Alarm_Task(void)
     previous = limitsChanged ? ALARM_NORMAL : AlarmState;
 
     /* 判定优先级：未取得数据/数据过期 -> 超限 -> 保持回差报警 -> 正常。
-     * 首次越界使用严格大于/小于；已报警时要回到阈值内 1℃才解除。
+     * 首次越界使用严格大于/小于；已报警时要回到阈值内 0.1℃才解除。
      */
     if (HaveTemperature == 0U)
     {
         /* 开机2秒还未读到有效温度，判为故障。 */
-        next = ((uint32_t)(now - MonitorStartedAt) >= 2000U)
-               ? ALARM_FAULT : ALARM_WAIT;
+        next = ((uint32_t)(now - MonitorStartedAt) >= 2000U) ? ALARM_FAULT : ALARM_WAIT;
     }
     else if ((uint32_t)(now - LastGoodAt) >= 2000U)
     {
@@ -240,8 +231,7 @@ static void Alarm_Task(void)
 static void Buzzer_Task(void)
 {
     /* phase 是当前一秒内的位置；状态切换时由 Alarm_Task 重置节奏起点。 */
-    uint32_t phase =
-        (uint32_t)(Tick_GetMs() - BeepStartedAt) % 1000U;
+    uint32_t phase = (uint32_t)(Tick_GetMs() - BeepStartedAt) % 1000U;
 
     uint8_t on = 0;
 
@@ -253,8 +243,7 @@ static void Buzzer_Task(void)
     else if (AlarmState == ALARM_FAULT)
     {
         /* 每秒响两次，每次100ms。 */
-        on = (phase < 100U ||
-              (phase >= 200U && phase < 300U));
+        on = (phase < 100U || (phase >= 200U && phase < 300U));
     }
 
     if (on != 0U)
@@ -376,8 +365,7 @@ int main(void)
         /* 流水灯仍然每100ms推进一步。 */
         if (Menu_GetLEDEnabled() != 0U)
         {
-            if (!ledRunning ||
-                (uint32_t)(now - lastLED) >= 100U)
+            if (!ledRunning || (uint32_t)(now - lastLED) >= 200U)
             {
                 LED_Run();
                 lastLED = now;
@@ -395,9 +383,6 @@ int main(void)
 
         /* 切页可能清屏，每轮最后补绘报警标记。 */
         Menu_ShowAlarmIndicator();
-
-        /* 取代原来的100ms长间隔。 */
-        /* 这里只做短延时；100ms、500ms 等周期由各任务的时间差单独判断。 */
         Delay_ms(5);
     }
 }

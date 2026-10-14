@@ -27,10 +27,10 @@ static const uint16_t TemperatureMasks[4] = {0xFFF8U, 0xFFFCU, 0xFFFEU, 0xFFFFU}
 /* 复位并检测应答，返回 1 表示传感器存在。 */
 static uint8_t DS18B20_Reset(void)
 {
-    uint32_t primask;
-    uint8_t present;
+    uint32_t primask;  //保存进入函数时的中断屏蔽状态
+    uint8_t present;  //记录是否检测到传感器应答，1表示检测到了
 
-    DQ_RELEASE();
+    DQ_RELEASE();  //STM32放开数据线
     Delay_us(10);
     if (!DQ_READ())
     {
