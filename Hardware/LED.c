@@ -3,8 +3,7 @@
 
 /* 四个LED使用的引脚 */
 /* 流水速度由 main.c 的时间判断决定，本模块每次调用只负责推进一步。 */
-#define LED_PINS (GPIO_Pin_12 | GPIO_Pin_13 | \
-                  GPIO_Pin_14 | GPIO_Pin_15)
+#define LED_PINS (GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15)
 
 /*
  * 下一次要点亮的LED编号：
@@ -30,8 +29,7 @@ void LED_Init(void)
 
     /* 先将四个引脚的输出电平设为低电平 */
     GPIO_ResetBits(GPIOB, LED_PINS);
-
-    /* 只配置PB12～PB15，不影响GPIOB上的其他设备 */
+	
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
     GPIO_InitStructure.GPIO_Pin = LED_PINS;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;

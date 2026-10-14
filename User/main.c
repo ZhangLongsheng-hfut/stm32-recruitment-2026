@@ -89,7 +89,7 @@ static void Temperature_Task(void)
 
     if (waiting != 0U)
     {
-        /* 未完成且未超时则继续后台等待，不结束本次转换。 */
+        /* 未完成且未超时则继续后台等待，不结束本次转换 */
         if (DS18B20_IsConversionDone() == 0U && (uint32_t)(now - convertAt) < DS18B20_GetConversionTimeoutMs())
         {
             return;
@@ -343,7 +343,7 @@ int main(void)
         now = Tick_GetMs();
 
         /* 电压每100ms更新一次。 */
-        if ((uint32_t)(now - lastADC) >= 100U)
+        if ((uint32_t)(now - lastADC) >= 100U)	
         {
             lastADC = now;
             Menu_SetVoltage(AD_GetVoltage());
