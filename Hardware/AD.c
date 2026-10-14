@@ -1,4 +1,4 @@
-#include "stm32f10x.h"                  // Device header
+#include "App.h"
 
 /**
   * º¯    Êý£ºAD³õÊ¼»¯

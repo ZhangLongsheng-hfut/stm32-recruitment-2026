@@ -1,8 +1,4 @@
-#include "stm32f10x.h"                  // Device header
-#include "Input.h"
-#include "Encoder.h"
-#include "Key.h"
-#include "LED.h"
+#include "App.h"
 
 
 /* 将硬件输入统一为 NONE/UP/DOWN/ENTER/BACK，菜单不需要关心具体引脚。

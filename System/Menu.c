@@ -1,8 +1,4 @@
-#include "Menu.h"
-#include "OLED.h"
-#include "Input.h"
-#include "LED.h"
-
+#include "App.h"
 
 #define MENU_VISIBLE_ROWS  4
 

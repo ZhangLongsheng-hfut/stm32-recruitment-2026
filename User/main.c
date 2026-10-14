@@ -1,16 +1,5 @@
-#include "stm32f10x.h"
-#include "OLED.h"
-#include "Encoder.h"
-#include "Key.h"
-#include "Input.h"
-#include "Menu.h"
-#include "LED.h"
-#include "AD.h"
-#include "Servo.h"
-#include "Serial.h"
-#include "Delay.h"
-#include "DS18B20.h"
-#include "Buzzer.h"
+#include "App.h"
+
 
 /* 中断每毫秒更新一次；volatile 使主循环每次读取实际内存中的计数。 */
 static volatile uint32_t TickMs = 0;
@@ -48,8 +37,7 @@ static void Tick_Init(void)
     TIM_Cmd(TIM4, DISABLE);
 
     TIM_TimeBaseStructInit(&timer);
-    timer.TIM_Prescaler =
-        (uint16_t)(timerClock / 1000000U - 1U);
+    timer.TIM_Prescaler = (uint16_t)(timerClock / 1000000U - 1U);
     /* 预分频后每计数一次为 1us，计满 1000 次产生一次更新中断。 */
     timer.TIM_Period = 999;
 
@@ -128,7 +116,7 @@ static void Temperature_Task(void)
     /* 用无符号时间差判断周期，可跨越毫秒计数的回绕点。
      * 500ms 是两次发起采样的最小间隔；实际转换较慢时周期会相应延长。
      */
-    if (cycleStarted != 0U && (uint32_t)(now - cycleAt) < 500U)
+    if (cycleStarted != 0U && (uint32_t)(now - cycleAt) < 500U)  //温度传感器采样间隔500ms
     {
         return;
     }
@@ -256,10 +244,9 @@ static void Buzzer_Task(void)
     }
 }
 
-/* 开机文字每100ms出现一个字符，全部显示后停留2秒。 */
+/* 开机文字每100ms出现一个字符，全部显示后停留2秒 */
 static void Boot_Show(void)
 {
-    /* 开机文字集中在此处；学号循环固定显示 10 个字符，欢迎文字显示 4 个字。 */
     static const char studentID[] = "2025212098";
     static const char *const welcome[] = {"欢", "迎", "加", "入"};
     uint8_t i;

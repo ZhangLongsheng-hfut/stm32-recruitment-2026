@@ -1,5 +1,4 @@
-#include "stm32f10x.h"
-#include "Key.h"
+#include "App.h"
 
 /* PA5 为 ENTER，PA3 为 BACK，均为上拉输入、按下接地。*/
 static uint8_t LastRaw = 0;  //保存最近观察到的按键状态，包括尚未确认的变化

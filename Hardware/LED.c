@@ -1,5 +1,5 @@
-#include "stm32f10x.h"
-#include "LED.h"
+#include "App.h"
+
 
 /* 四个LED使用的引脚 */
 /* 流水速度由 main.c 的时间判断决定，本模块每次调用只负责推进一步。 */

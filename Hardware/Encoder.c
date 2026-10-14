@@ -1,9 +1,8 @@
-#include "stm32f10x.h"                  // Device header
+#include "App.h"
 
-/* 两路外部中断累加旋转方向，Encoder_Get 读取后清零，供 Input.c 转为菜单事件。 */
 int16_t Encoder_Count;
 
-/* PB0/PB1 上拉输入，分别接 EXTI0/EXTI1；下降沿触发后读取另一相判断方向。 */
+/* PB0/PB1 上拉输入，分别接 EXTI0/EXTI1 */
 void Encoder_Init(void)
 {
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
@@ -55,7 +54,7 @@ void EXTI0_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(EXTI_Line0) == SET)
 	{
-		/*如果出现数据乱跳的现象，可再次判断引脚电平，以避免抖动*/
+		/* 再次判断引脚电平，以避免抖动 */
 		if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) == 0)
 		{
 			if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) == 0)
@@ -72,7 +71,7 @@ void EXTI1_IRQHandler(void)
 {
 	if (EXTI_GetITStatus(EXTI_Line1) == SET)
 	{
-		/*如果出现数据乱跳的现象，可再次判断引脚电平，以避免抖动*/
+		/* 再次判断引脚电平，以避免抖动 */
 		if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_1) == 0)
 		{
 			if (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_0) == 0)

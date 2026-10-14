@@ -670,6 +670,11 @@
               <FileType>5</FileType>
               <FilePath>.\User\stm32f10x_it.h</FilePath>
             </File>
+            <File>
+              <FileName>App.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\User\App.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

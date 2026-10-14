@@ -1,6 +1,4 @@
-#include "stm32f10x.h"
-#include "DS18B20.h"
-#include "Delay.h"
+#include "App.h"
 
 #define DS18B20_PORT       GPIOB
 #define DS18B20_PIN        GPIO_Pin_10
@@ -237,9 +235,7 @@ uint8_t DS18B20_StartConvert(void)
     if (ConfigurationTried == 0U)
     {
         ConfigurationTried = 1;
-        for (attempt = 0;
-             (data[4] & 0x60U) != 0x40U && attempt < 3U;
-             attempt++)
+        for (attempt = 0; (data[4] & 0x60U) != 0x40U && attempt < 3U; attempt++)
         {
             if (DS18B20_Reset() == 0U)
             {
