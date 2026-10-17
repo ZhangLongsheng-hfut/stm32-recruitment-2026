@@ -76,9 +76,8 @@ static uint32_t Tick_GetMs(void)
 /* 每约500ms启动一轮；慢速转换完成后再开始下一轮。 */
 static void Temperature_Task(void)
 {
-    /* static 变量在多次调用之间保留：waiting=0 发起转换，waiting=1 等待读回。
-     * 等待期间直接返回主循环，按键、流水灯等任务仍可继续执行。
-     */
+    /* static 变量在多次调用之间保留：waiting=0 发起转换，waiting=1 等待读回。 */
+	
     static uint8_t waiting = 0;
     static uint8_t cycleStarted = 0;
     static uint32_t cycleAt = 0;
@@ -249,7 +248,8 @@ static void Boot_Show(void)
 {
     static const char studentID[] = "2025212098";
     static const char *const welcome[] = {"欢", "迎", "加", "入"};
-    uint8_t i;
+    uint8_t i = 0;
+	uint8_t j;
 
     OLED_Clear();
     /* 10个ASCII字符共80像素，从X=24（第4列）开始居中。 */
@@ -258,6 +258,51 @@ static void Boot_Show(void)
         OLED_ShowChar(1, 4 + i, studentID[i]);
         Delay_ms(100);
     }
+	
+	/* 学号从左向右滚动，溢出屏幕后从左侧重新显示 */
+	/* 2025212098
+	       2025212098 */
+//	for(j=1;j<=16;j++)
+//	{
+//		for(i = 9; i>=0;i--)
+//		{
+//			uint8_t j;
+//			OLED_ShowChar(1,j,studentID[i]);
+//			Delay_ms(100);
+//		}
+//		Delay_ms(100);
+//		OLED_Clear();
+//	}
+	
+	/* 学号与欢迎加入同步从上往下显示 */
+//	if(i == 5  || i == 0)
+//	{
+//		i = 0;
+//		for(i=1;i<=4;i++)
+//		{
+//			OLED_Clear();
+//			OLED_ShowNum(i,4,2025212098,10);
+//			OLED_ShowChinese(2+i,3,"欢迎加入");
+//			Delay_ms(500);
+//			
+//		}
+//		for(j=0;j<=3;j++)
+//		{
+//			OLED_Clear();
+//			OLED_ShowChinese(j+1,3,"欢迎加入");
+//			if(j >= 2)
+//			{
+//				OLED_ShowNum(j-1,4,2025212098,10);
+//			}
+//			Delay_ms(500);
+//			
+//		}
+//		i = 5;
+//	}
+	
+	
+	
+	
     /* 4个汉字共64像素，从X=32（第3个汉字列）开始居中。 */
     for (i = 0; i < 4; i++)
     {

@@ -40,16 +40,18 @@ static uint8_t DS18B20_Reset(void)
     __disable_irq();
 
     DQ_LOW();
+	
     Delay_us(500);
     DQ_RELEASE();
     Delay_us(70);
+	
     present = DQ_READ() ? 0U : 1U;
 
     __set_PRIMASK(primask);
     Delay_us(410);
 
     /* 应答结束后总线应回到高电平。 */
-    return (present && DQ_READ()) ? 1U : 0U;
+    return ((present && DQ_READ()) ? 1U : 0U);
 }
 
 /* 写一位，短暂关闭中断以保证单总线时序。 */
